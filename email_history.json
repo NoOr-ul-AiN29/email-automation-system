@@ -1,0 +1,35 @@
+[
+  {
+    "id": "96a5f80d-fed0-422e-9bc7-f682df38a936",
+    "to": "noorulain.29fatima@gmail.com",
+    "subject": "hwhwhwh",
+    "body": "wmndbsnws",
+    "status": "sent",
+    "scheduled_at": null,
+    "created_at": "2026-05-31T06:43:58.296565+00:00",
+    "sent_at": "2026-05-31T06:43:58.296565+00:00",
+    "note": "Email sent successfully. Resend ID: 02add89c-3491-44f3-8642-26b31b9f0299"
+  },
+  {
+    "id": "43c67d47-dec8-4314-9536-ec3176e75817",
+    "to": "noorulain.29fatima@gmail.com",
+    "subject": "heheheh",
+    "body": "jwjjwjwjwjwj",
+    "status": "scheduled",
+    "scheduled_at": "2026-05-31T11:46:00+00:00",
+    "created_at": "2026-05-31T06:46:19.320386+00:00",
+    "sent_at": null,
+    "note": ""
+  },
+  {
+    "id": "b3695802-8aee-403c-9581-ae38ca94decc",
+    "to": "noorulain.29fatima@gmail.com",
+    "subject": "hsckjxshkjx",
+    "body": "jhkdgjwhgdhjwghd",
+    "status": "scheduled",
+    "scheduled_at": "2026-06-07T11:47:00+00:00",
+    "created_at": "2026-05-31T06:47:16.302170+00:00",
+    "sent_at": null,
+    "note": ""
+  }
+]
