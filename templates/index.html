@@ -3,505 +3,739 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Email Automation System</title>
-
-  <!--
-    DEBUG NOTE:
-    If you see this page completely blank, open browser DevTools:
-      F12 → Console tab  (look for red JS errors)
-      F12 → Network tab  (look for red 404 errors on style.css)
-
-    The page should NEVER be blank because ALL CSS is inline below.
-    If it is still blank, the HTML itself is not reaching the browser.
-  -->
+  <title>Mailer — Email Automation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap" rel="stylesheet">
 
   <style>
-    /* ============================================================
-       ALL STYLES ARE INLINE — page works even if /public/style.css
-       returns 404. Background is dark navy, text is light grey.
-       If you see a WHITE page, your browser is showing OLD cached
-       content. Do a hard refresh: Ctrl+Shift+R (Windows/Linux)
-    ============================================================ */
-
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:        #0f172a;
-      --surface:   #1e293b;
-      --border:    #334155;
-      --primary:   #6366f1;
-      --primary-h: #4f46e5;
-      --success:   #22c55e;
-      --danger:    #ef4444;
-      --warning:   #f59e0b;
-      --text:      #e2e8f0;
-      --muted:     #94a3b8;
-      --radius:    12px;
+      --ink:       #1a1a2e;
+      --ink-soft:  #4a4a6a;
+      --ink-faint: #8888aa;
+      --paper:     #f8f7f4;
+      --cream:     #f0ede6;
+      --white:     #ffffff;
+      --accent:    #5b4fcf;
+      --accent-lt: #ede9ff;
+      --jade:      #0f9b6e;
+      --jade-lt:   #d4f5ea;
+      --amber:     #c07a00;
+      --amber-lt:  #fef3d3;
+      --rose:      #c0334a;
+      --rose-lt:   #fde8ec;
+      --border:    #e2dfd8;
+      --radius:    16px;
+      --radius-sm: 10px;
+      --shadow:    0 2px 12px rgba(26,26,46,0.08);
+      --shadow-lg: 0 8px 40px rgba(26,26,46,0.13);
     }
 
     html, body {
-      background-color: #0f172a !important;
-      color: #e2e8f0 !important;
       min-height: 100vh;
+      background: var(--paper);
+      color: var(--ink);
     }
 
     body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      padding: 2rem 1rem;
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 400;
+      line-height: 1.6;
+      padding: 0;
     }
 
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
+    /* ── Layout ── */
+    .app {
+      display: grid;
+      grid-template-columns: 260px 1fr;
+      min-height: 100vh;
+    }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      background: var(--ink);
+      color: var(--paper);
+      padding: 2rem 1.5rem;
       display: flex;
       flex-direction: column;
-      gap: 2rem;
+      gap: 2.5rem;
+      position: sticky;
+      top: 0;
+      height: 100vh;
     }
 
-    /* ── Debug Banner (visible only if Jinja2 renders correctly) ── */
-    .debug-banner {
-      background: #1e3a5f;
-      border: 1px solid #3b82f6;
-      border-radius: 8px;
-      padding: 0.6rem 1rem;
-      font-size: 0.78rem;
-      color: #93c5fd;
-      font-family: monospace;
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
     }
 
-    /* ── Header ── */
-    header { text-align: center; }
-    header h1 { font-size: 2rem; font-weight: 700; color: #818cf8; margin-bottom: 0.3rem; }
-    header p  { color: var(--muted); font-size: 0.95rem; }
-
-    /* ── Stats ── */
-    .stats {
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 1rem;
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.1rem;
     }
-    @media (max-width: 600px) { .stats { grid-template-columns: repeat(2, 1fr); } }
 
-    .stat-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius);
-      padding: 1rem;
-      text-align: center;
+    .brand-name {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.4rem;
+      letter-spacing: -0.01em;
+      color: #fff;
     }
-    .stat-card .number { font-size: 2rem; font-weight: 700; line-height: 1; margin-bottom: 0.25rem; }
-    .stat-card .label  { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
-    .stat-card.total   .number { color: #818cf8; }
-    .stat-card.sent    .number { color: var(--success); }
-    .stat-card.pending .number { color: var(--warning); }
-    .stat-card.failed  .number { color: var(--danger); }
 
-    /* ── Tabs ── */
-    .tabs { display: flex; gap: 0.5rem; border-bottom: 1px solid var(--border); }
-    .tab-btn {
-      background: none; border: none; color: var(--muted);
-      font-size: 0.95rem; font-weight: 500;
-      padding: 0.6rem 1.2rem; cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: color 0.2s, border-color 0.2s;
+    /* Stats in sidebar */
+    .sidebar-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
     }
-    .tab-btn:hover  { color: var(--text); }
-    .tab-btn.active { color: #818cf8; border-bottom-color: #818cf8; }
 
-    .tab-content        { display: none; }
+    .sidebar-stats-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #6666a0;
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.65rem 0.9rem;
+      border-radius: var(--radius-sm);
+      background: rgba(255,255,255,0.05);
+      transition: background 0.2s;
+    }
+
+    .stat-row:hover { background: rgba(255,255,255,0.09); }
+
+    .stat-label {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.88rem;
+      color: #b0b0d0;
+    }
+
+    .stat-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .dot-total   { background: #818cf8; }
+    .dot-sent    { background: #34d399; }
+    .dot-pending { background: #fbbf24; }
+    .dot-failed  { background: #f87171; }
+
+    .stat-num {
+      font-size: 1rem;
+      font-weight: 600;
+      color: #fff;
+    }
+
+    /* Nav tabs in sidebar */
+    .nav { display: flex; flex-direction: column; gap: 0.4rem; }
+
+    .nav-title {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: #6666a0;
+      margin-bottom: 0.25rem;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0.7rem 0.9rem;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: transparent;
+      color: #9090bb;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      text-align: left;
+      transition: background 0.2s, color 0.2s;
+    }
+
+    .nav-btn:hover { background: rgba(255,255,255,0.06); color: #fff; }
+    .nav-btn.active { background: rgba(91,79,207,0.35); color: #c4bcff; }
+    .nav-btn.active .nav-icon { opacity: 1; }
+
+    .nav-icon { opacity: 0.6; font-size: 1rem; line-height: 1; }
+
+    .sidebar-footer {
+      margin-top: auto;
+      font-size: 0.75rem;
+      color: #44446a;
+      line-height: 1.8;
+    }
+
+    /* ── Main content ── */
+    .main {
+      background: var(--paper);
+      padding: 3rem 3.5rem;
+      overflow-y: auto;
+    }
+
+    .page-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .page-header h1 {
+      font-family: 'Instrument Serif', serif;
+      font-size: 2.1rem;
+      font-weight: 400;
+      color: var(--ink);
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin-bottom: 0.35rem;
+    }
+
+    .page-header p {
+      font-size: 0.95rem;
+      color: var(--ink-faint);
+    }
+
+    /* ── Tab panels ── */
+    .tab-content { display: none; animation: fadeIn 0.2s ease; }
     .tab-content.active { display: block; }
+
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
 
     /* ── Card ── */
     .card {
-      background: var(--surface);
+      background: var(--white);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 1.5rem;
-      margin-top: 1.2rem;
+      padding: 2rem;
+      box-shadow: var(--shadow);
     }
-    .card h2 { font-size: 1.05rem; font-weight: 600; color: #818cf8; margin-bottom: 1.2rem; }
+
+    .card + .card { margin-top: 1.25rem; }
+
+    .card-title {
+      font-family: 'Instrument Serif', serif;
+      font-size: 1.3rem;
+      font-weight: 400;
+      color: var(--ink);
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--cream);
+    }
 
     /* ── Form ── */
-    .form-group { display: flex; flex-direction: column; gap: 0.4rem; margin-bottom: 1rem; }
-    .form-group label { font-size: 0.88rem; color: var(--muted); font-weight: 500; }
-    .form-group input,
-    .form-group textarea {
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-family: inherit;
-      font-size: 0.9rem;
-      padding: 0.65rem 0.9rem;
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      margin-bottom: 1.1rem;
+    }
+
+    .form-group.full { grid-column: 1 / -1; }
+
+    label {
+      font-size: 0.83rem;
+      font-weight: 500;
+      color: var(--ink-soft);
+      letter-spacing: 0.01em;
+    }
+
+    input, textarea {
+      background: var(--paper);
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--ink);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      padding: 0.7rem 1rem;
       outline: none;
-      transition: border-color 0.2s;
+      transition: border-color 0.2s, box-shadow 0.2s;
       width: 100%;
     }
-    .form-group input:focus,
-    .form-group textarea:focus     { border-color: var(--primary); }
-    .form-group input::placeholder,
-    .form-group textarea::placeholder { color: #475569; }
-    .form-group textarea { height: 120px; resize: vertical; }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(91,79,207,0.12);
+      background: var(--white);
+    }
+
+    input::placeholder, textarea::placeholder { color: #bbbbd0; }
+
+    textarea { height: 130px; resize: vertical; }
 
     /* ── Buttons ── */
     .btn {
-      display: inline-flex; align-items: center; justify-content: center;
-      gap: 0.4rem; padding: 0.7rem 1.6rem; border: none; border-radius: 8px;
-      font-size: 0.95rem; font-weight: 600; cursor: pointer;
-      transition: background 0.2s, transform 0.1s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.8rem;
+      border: none;
+      border-radius: 999px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.92rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      letter-spacing: 0.01em;
     }
-    .btn:active:not(:disabled) { transform: scale(0.98); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); color: #fff; }
-    .btn-primary:hover:not(:disabled) { background: var(--primary-h); }
-    .btn-success { background: #16a34a; color: #fff; }
-    .btn-success:hover:not(:disabled) { background: #15803d; }
-    .btn-full { width: 100%; margin-top: 0.5rem; }
-    .btn-sm   { padding: 0.4rem 0.9rem; font-size: 0.82rem; }
+
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(91,79,207,0.35);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #4a3fbf;
+      box-shadow: 0 4px 18px rgba(91,79,207,0.45);
+    }
+
+    .btn-jade {
+      background: var(--jade);
+      color: #fff;
+      box-shadow: 0 2px 10px rgba(15,155,110,0.3);
+    }
+    .btn-jade:hover:not(:disabled) {
+      background: #0c8460;
+      box-shadow: 0 4px 18px rgba(15,155,110,0.4);
+    }
+
+    .btn-ghost {
+      background: var(--cream);
+      color: var(--ink-soft);
+      box-shadow: none;
+    }
+    .btn-ghost:hover:not(:disabled) { background: var(--border); }
+
+    .btn-sm { padding: 0.5rem 1.1rem; font-size: 0.82rem; }
+
+    .btn-row { display: flex; align-items: center; gap: 0.75rem; margin-top: 0.5rem; }
+
+    /* ── History table ── */
+    .table-wrap {
+      overflow-x: auto;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+
+    thead { background: var(--cream); }
+
+    thead th {
+      padding: 0.8rem 1.1rem;
+      text-align: left;
+      color: var(--ink-soft);
+      font-weight: 600;
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-top: 1px solid var(--border); transition: background 0.12s; }
+    tbody tr:hover { background: var(--paper); }
+
+    tbody td {
+      padding: 0.85rem 1.1rem;
+      vertical-align: middle;
+      color: var(--ink);
+    }
+
+    .td-truncate { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem;
+      color: var(--ink-faint);
+    }
+
+    .empty-state-icon {
+      font-size: 2.5rem;
+      margin-bottom: 0.75rem;
+      opacity: 0.4;
+    }
+
+    .empty-state p { font-size: 0.9rem; font-style: italic; }
+
+    /* ── Badges ── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.75rem;
+      border-radius: 999px;
+      font-size: 0.76rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+
+    .badge-dot {
+      width: 6px; height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .badge-sent    { background: var(--jade-lt);  color: var(--jade); }
+    .badge-sent .badge-dot { background: var(--jade); }
+
+    .badge-scheduled { background: var(--amber-lt); color: var(--amber); }
+    .badge-scheduled .badge-dot { background: var(--amber); }
+
+    .badge-failed  { background: var(--rose-lt);  color: var(--rose); }
+    .badge-failed .badge-dot { background: var(--rose); }
 
     /* ── Toast ── */
     .toast {
-      position: fixed; bottom: 1.5rem; right: 1.5rem;
-      background: var(--surface); border: 1px solid var(--border);
-      border-radius: var(--radius); padding: 0.9rem 1.2rem;
-      font-size: 0.9rem; max-width: 340px;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-      transform: translateY(120%); transition: transform 0.3s ease; z-index: 999;
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      background: var(--ink);
+      color: var(--paper);
+      border-radius: var(--radius-sm);
+      padding: 0.9rem 1.4rem;
+      font-size: 0.88rem;
+      max-width: 320px;
+      box-shadow: var(--shadow-lg);
+      transform: translateY(140%);
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 999;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
     }
-    .toast.show    { transform: translateY(0); }
-    .toast.success { border-left: 4px solid var(--success); }
-    .toast.error   { border-left: 4px solid var(--danger); }
+
+    .toast.show { transform: translateY(0); }
+
+    .toast.success::before { content: '✓'; color: #34d399; font-weight: 700; }
+    .toast.error::before   { content: '✕'; color: #f87171; font-weight: 700; }
 
     /* ── Spinner ── */
     .spinner {
-      display: inline-block; width: 14px; height: 14px;
-      border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff;
-      border-radius: 50%; animation: spin 0.7s linear infinite;
+      display: inline-block;
+      width: 14px; height: 14px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
     }
+
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── History Table ── */
-    .table-header {
-      display: flex; justify-content: space-between;
-      align-items: center; margin-bottom: 1rem; margin-top: 1.2rem;
+    /* ── History header ── */
+    .history-header {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-bottom: 1.25rem;
     }
-    .table-header h2 { font-size: 1.05rem; font-weight: 600; color: #818cf8; }
 
-    .table-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
-    table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-    thead { background: #0f172a; }
-    thead th {
-      padding: 0.75rem 1rem; text-align: left; color: var(--muted);
-      font-weight: 600; font-size: 0.75rem;
-      text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap;
+    /* ── Responsive ── */
+    @media (max-width: 768px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { height: auto; position: relative; padding: 1.5rem; flex-direction: row; flex-wrap: wrap; gap: 1.5rem; }
+      .sidebar-footer { display: none; }
+      .main { padding: 1.5rem; }
+      .form-row { grid-template-columns: 1fr; }
     }
-    tbody tr { border-top: 1px solid var(--border); transition: background 0.15s; }
-    tbody tr:hover { background: #1a2744; }
-    tbody td { padding: 0.75rem 1rem; vertical-align: middle; color: var(--text); }
-    .td-truncate { max-width: 180px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .empty-row td { text-align: center; color: var(--muted); font-style: italic; padding: 2rem; }
-
-    /* ── Badges ── */
-    .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
-    .badge-sent      { background: #14532d; color: #86efac; border: 1px solid #22c55e; }
-    .badge-scheduled { background: #451a03; color: #fde68a; border: 1px solid #f59e0b; }
-    .badge-failed    { background: #450a0a; color: #fca5a5; border: 1px solid #ef4444; }
-
-    footer { text-align: center; color: var(--border); font-size: 0.78rem; margin-top: 1rem; }
   </style>
 </head>
 <body>
-<div class="container">
+<div class="app">
 
-  <!--
-    DEBUG BANNER — confirms Jinja2 rendered this template.
-    If you see this banner, the backend is working perfectly.
-    The numbers confirm Python passed data to the template.
-  -->
-  <div class="debug-banner">
-    ✅ Jinja2 OK — Template rendered successfully |
-    Total: {{ total }} | Sent: {{ sent }} | Scheduled: {{ pending }} | Failed: {{ failed }} |
-    Server path: {{ debug_base_dir }}
-  </div>
+  <!-- ── Sidebar ── -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">✉</div>
+      <span class="brand-name">Mailer</span>
+    </div>
 
-  <!-- Header -->
-  <header>
-    <h1>✉️ Email Automation System</h1>
-    <p>Schedule emails or send them instantly — fully automated.</p>
-  </header>
+    <div>
+      <div class="sidebar-stats-title">Overview</div>
+      <div class="sidebar-stats">
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot dot-total"></span>Total</span>
+          <span class="stat-num" id="statTotal">{{ total }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot dot-sent"></span>Sent</span>
+          <span class="stat-num" id="statSent">{{ sent }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot dot-pending"></span>Scheduled</span>
+          <span class="stat-num" id="statPending">{{ pending }}</span>
+        </div>
+        <div class="stat-row">
+          <span class="stat-label"><span class="stat-dot dot-failed"></span>Failed</span>
+          <span class="stat-num" id="statFailed">{{ failed }}</span>
+        </div>
+      </div>
+    </div>
 
-  <!-- Stats -->
-  <div class="stats">
-    <div class="stat-card total">
-      <div class="number" id="statTotal">{{ total }}</div>
-      <div class="label">Total</div>
-    </div>
-    <div class="stat-card sent">
-      <div class="number" id="statSent">{{ sent }}</div>
-      <div class="label">Sent</div>
-    </div>
-    <div class="stat-card pending">
-      <div class="number" id="statPending">{{ pending }}</div>
-      <div class="label">Scheduled</div>
-    </div>
-    <div class="stat-card failed">
-      <div class="number" id="statFailed">{{ failed }}</div>
-      <div class="label">Failed</div>
-    </div>
-  </div>
+    <nav class="nav">
+      <div class="nav-title">Actions</div>
+      <button class="nav-btn active" onclick="switchTab(event,'schedule')">
+        <span class="nav-icon">📅</span> Schedule Email
+      </button>
+      <button class="nav-btn" onclick="switchTab(event,'sendnow')">
+        <span class="nav-icon">⚡</span> Send Now
+      </button>
+      <button class="nav-btn" onclick="switchTab(event,'history')">
+        <span class="nav-icon">📋</span> History
+      </button>
+    </nav>
 
-  <!-- Tabs -->
-  <div>
-    <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab(event,'schedule')">📅 Schedule Email</button>
-      <button class="tab-btn"        onclick="switchTab(event,'sendnow')">⚡ Send Now</button>
-      <button class="tab-btn"        onclick="switchTab(event,'history')">📋 History</button>
+    <div class="sidebar-footer">
+      Built with FastAPI · Resend · Vercel
     </div>
+  </aside>
+
+  <!-- ── Main ── -->
+  <main class="main">
 
     <!-- Tab: Schedule -->
     <div class="tab-content active" id="tab-schedule">
+      <div class="page-header">
+        <h1>Schedule an email</h1>
+        <p>Pick a time and we'll deliver it automatically.</p>
+      </div>
+
       <div class="card">
-        <h2>📅 Schedule an Email</h2>
-        <div class="form-group">
-          <label>Recipient Email</label>
-          <input type="email" id="sch-to" placeholder="recipient@example.com" />
+        <div class="form-row">
+          <div class="form-group full">
+            <label>Recipient</label>
+            <input type="email" id="sch-to" placeholder="name@example.com" />
+          </div>
+          <div class="form-group full">
+            <label>Subject</label>
+            <input type="text" id="sch-subject" placeholder="What's this email about?" />
+          </div>
+          <div class="form-group full">
+            <label>Message</label>
+            <textarea id="sch-body" placeholder="Write your message here…"></textarea>
+          </div>
+          <div class="form-group full">
+            <label>Send at</label>
+            <input type="datetime-local" id="sch-datetime" />
+          </div>
         </div>
-        <div class="form-group">
-          <label>Subject</label>
-          <input type="text" id="sch-subject" placeholder="Your email subject..." />
+        <div class="btn-row">
+          <button class="btn btn-primary" id="scheduleBtn" onclick="scheduleEmail()">
+            Schedule email
+          </button>
+          <span style="font-size:0.82rem;color:var(--ink-faint);">We'll handle delivery.</span>
         </div>
-        <div class="form-group">
-          <label>Message</label>
-          <textarea id="sch-body" placeholder="Type your message here..."></textarea>
-        </div>
-        <div class="form-group">
-          <label>Schedule Date &amp; Time</label>
-          <input type="datetime-local" id="sch-datetime" />
-        </div>
-        <button class="btn btn-primary btn-full" id="scheduleBtn" onclick="scheduleEmail()">
-          📅 Schedule Email
-        </button>
       </div>
     </div>
 
     <!-- Tab: Send Now -->
     <div class="tab-content" id="tab-sendnow">
+      <div class="page-header">
+        <h1>Send immediately</h1>
+        <p>Compose and send your email right now.</p>
+      </div>
+
       <div class="card">
-        <h2>⚡ Send Email Immediately</h2>
         <div class="form-group">
-          <label>Recipient Email</label>
-          <input type="email" id="now-to" placeholder="recipient@example.com" />
+          <label>Recipient</label>
+          <input type="email" id="now-to" placeholder="name@example.com" />
         </div>
         <div class="form-group">
           <label>Subject</label>
-          <input type="text" id="now-subject" placeholder="Your email subject..." />
+          <input type="text" id="now-subject" placeholder="What's this email about?" />
         </div>
         <div class="form-group">
           <label>Message</label>
-          <textarea id="now-body" placeholder="Type your message here..."></textarea>
+          <textarea id="now-body" placeholder="Write your message here…"></textarea>
         </div>
-        <button class="btn btn-success btn-full" id="sendNowBtn" onclick="sendNow()">
-          ⚡ Send Now
-        </button>
+        <div class="btn-row">
+          <button class="btn btn-jade" id="sendNowBtn" onclick="sendNow()">
+            Send now
+          </button>
+        </div>
       </div>
     </div>
 
     <!-- Tab: History -->
     <div class="tab-content" id="tab-history">
-      <div class="table-header">
-        <h2>📋 Email History</h2>
-        <button class="btn btn-primary btn-sm" onclick="refreshHistory()">🔄 Refresh</button>
+      <div class="page-header">
+        <h1>Email history</h1>
+        <p>All your sent and scheduled messages.</p>
       </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Status</th>
-              <th>To</th>
-              <th>Subject</th>
-              <th>Scheduled At</th>
-              <th>Sent At</th>
-              <th>Note</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody">
-            {% if history %}
-              {% for email in history %}
+
+      <div class="card" style="padding:0; overflow:hidden;">
+        <div style="padding:1.5rem 2rem 1rem; display:flex; align-items:center; justify-content:space-between; border-bottom:1px solid var(--cream);">
+          <span style="font-size:0.9rem; color:var(--ink-soft);">All emails</span>
+          <button class="btn btn-ghost btn-sm" onclick="refreshHistory()">Refresh</button>
+        </div>
+
+        <div class="table-wrap" style="border:none; border-radius:0;">
+          <table>
+            <thead>
               <tr>
-                <td>
-                  {% if email.status == 'sent' %}
-                    <span class="badge badge-sent">✅ Sent</span>
-                  {% elif email.status == 'scheduled' %}
-                    <span class="badge badge-scheduled">⏳ Scheduled</span>
-                  {% else %}
-                    <span class="badge badge-failed">❌ Failed</span>
-                  {% endif %}
-                </td>
-                <td class="td-truncate">{{ email.to }}</td>
-                <td class="td-truncate">{{ email.subject }}</td>
-                <td>{{ email.scheduled_at[:16] if email.scheduled_at else '—' }}</td>
-                <td>{{ email.sent_at[:16]      if email.sent_at      else '—' }}</td>
-                <td class="td-truncate" style="color:#94a3b8; font-size:0.8rem;">
-                  {{ email.note or '—' }}
-                </td>
+                <th>Status</th>
+                <th>To</th>
+                <th>Subject</th>
+                <th>Scheduled</th>
+                <th>Sent</th>
+                <th>Note</th>
               </tr>
-              {% endfor %}
-            {% else %}
-              <tr class="empty-row">
-                <td colspan="6">No emails yet. Schedule or send your first one!</td>
-              </tr>
-            {% endif %}
-          </tbody>
-        </table>
+            </thead>
+            <tbody id="historyBody">
+              {% if history %}
+                {% for email in history %}
+                <tr>
+                  <td>
+                    {% if email.status == 'sent' %}
+                      <span class="badge badge-sent"><span class="badge-dot"></span>Sent</span>
+                    {% elif email.status == 'scheduled' %}
+                      <span class="badge badge-scheduled"><span class="badge-dot"></span>Scheduled</span>
+                    {% else %}
+                      <span class="badge badge-failed"><span class="badge-dot"></span>Failed</span>
+                    {% endif %}
+                  </td>
+                  <td class="td-truncate">{{ email.to }}</td>
+                  <td class="td-truncate">{{ email.subject }}</td>
+                  <td style="color:var(--ink-soft); font-size:0.83rem;">{{ email.scheduled_at[:16] if email.scheduled_at else '—' }}</td>
+                  <td style="color:var(--ink-soft); font-size:0.83rem;">{{ email.sent_at[:16] if email.sent_at else '—' }}</td>
+                  <td class="td-truncate" style="color:var(--ink-faint); font-size:0.82rem; font-style:italic;">{{ email.note or '—' }}</td>
+                </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="6">
+                    <div class="empty-state">
+                      <div class="empty-state-icon">✉️</div>
+                      <p>No emails yet — schedule or send your first one.</p>
+                    </div>
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
 
-  </div><!-- end tabs wrapper -->
-
-  <footer>Email Automation System · FastAPI + Resend + Vercel</footer>
+  </main>
 </div>
 
-<!-- Toast notification -->
+<!-- Toast -->
 <div class="toast" id="toast"></div>
 
 <script>
-  // Confirm JS is running — check browser console for this message
-  console.log("✅ JavaScript loaded successfully.");
-
-  // Set min datetime to right now
-  (function () {
-    const dt  = document.getElementById('sch-datetime');
+  // Set min datetime
+  (function() {
+    const dt = document.getElementById('sch-datetime');
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     dt.min = now.toISOString().slice(0, 16);
-    console.log("✅ datetime-local min set to:", dt.min);
   })();
 
-  // ── Tab switching ──────────────────────────────────────────
   function switchTab(event, name) {
     document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
     document.getElementById('tab-' + name).classList.add('active');
     event.currentTarget.classList.add('active');
   }
 
-  // ── Toast notification ────────────────────────────────────
   function showToast(message, type) {
-    const t   = document.getElementById('toast');
+    const t = document.getElementById('toast');
     t.textContent = message;
-    t.className   = 'toast ' + (type || 'success') + ' show';
+    t.className = 'toast ' + (type || 'success') + ' show';
     setTimeout(() => t.classList.remove('show'), 4000);
   }
 
-  // ── Button loading state ──────────────────────────────────
   function setLoading(id, on) {
     const btn = document.getElementById(id);
     if (on) {
-      btn.disabled     = true;
+      btn.disabled = true;
       btn.dataset.orig = btn.innerHTML;
-      btn.innerHTML    = '<span class="spinner"></span> Please wait...';
+      btn.innerHTML = '<span class="spinner"></span> Please wait…';
     } else {
-      btn.disabled  = false;
+      btn.disabled = false;
       btn.innerHTML = btn.dataset.orig;
     }
   }
 
-  // ── Schedule email ────────────────────────────────────────
   async function scheduleEmail() {
-    const to       = document.getElementById('sch-to').value.trim();
-    const subject  = document.getElementById('sch-subject').value.trim();
-    const body     = document.getElementById('sch-body').value.trim();
+    const to = document.getElementById('sch-to').value.trim();
+    const subject = document.getElementById('sch-subject').value.trim();
+    const body = document.getElementById('sch-body').value.trim();
     const datetime = document.getElementById('sch-datetime').value;
-
-    if (!to || !subject || !body || !datetime) {
-      showToast('❌ Please fill in all fields.', 'error');
-      return;
-    }
-
+    if (!to || !subject || !body || !datetime) { showToast('Please fill in all fields.', 'error'); return; }
     setLoading('scheduleBtn', true);
-
     const fd = new FormData();
-    fd.append('to', to);
-    fd.append('subject', subject);
-    fd.append('body', body);
-    fd.append('scheduled_at', datetime);
-
+    fd.append('to', to); fd.append('subject', subject);
+    fd.append('body', body); fd.append('scheduled_at', datetime);
     try {
-      const res  = await fetch('/schedule', { method: 'POST', body: fd });
+      const res = await fetch('/schedule', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
-        showToast('✅ ' + data.message, 'success');
-        ['sch-to', 'sch-subject', 'sch-body', 'sch-datetime'].forEach(
-          id => document.getElementById(id).value = ''
-        );
+        showToast(data.message, 'success');
+        ['sch-to','sch-subject','sch-body','sch-datetime'].forEach(id => document.getElementById(id).value = '');
         refreshStats();
-      } else {
-        showToast('❌ ' + data.message, 'error');
-      }
-    } catch (err) {
-      showToast('❌ Network error: ' + err.message, 'error');
-      console.error('scheduleEmail error:', err);
-    } finally {
-      setLoading('scheduleBtn', false);
-    }
+      } else { showToast(data.message, 'error'); }
+    } catch (err) { showToast('Network error: ' + err.message, 'error'); }
+    finally { setLoading('scheduleBtn', false); }
   }
 
-  // ── Send now ──────────────────────────────────────────────
   async function sendNow() {
-    const to      = document.getElementById('now-to').value.trim();
+    const to = document.getElementById('now-to').value.trim();
     const subject = document.getElementById('now-subject').value.trim();
-    const body    = document.getElementById('now-body').value.trim();
-
-    if (!to || !subject || !body) {
-      showToast('❌ Please fill in all fields.', 'error');
-      return;
-    }
-
+    const body = document.getElementById('now-body').value.trim();
+    if (!to || !subject || !body) { showToast('Please fill in all fields.', 'error'); return; }
     setLoading('sendNowBtn', true);
-
     const fd = new FormData();
-    fd.append('to', to);
-    fd.append('subject', subject);
-    fd.append('body', body);
-
+    fd.append('to', to); fd.append('subject', subject); fd.append('body', body);
     try {
-      const res  = await fetch('/send-now', { method: 'POST', body: fd });
+      const res = await fetch('/send-now', { method: 'POST', body: fd });
       const data = await res.json();
       if (data.success) {
-        showToast('✅ ' + data.message, 'success');
-        ['now-to', 'now-subject', 'now-body'].forEach(
-          id => document.getElementById(id).value = ''
-        );
+        showToast(data.message, 'success');
+        ['now-to','now-subject','now-body'].forEach(id => document.getElementById(id).value = '');
         refreshStats();
-      } else {
-        showToast('❌ ' + data.message, 'error');
-      }
-    } catch (err) {
-      showToast('❌ Network error: ' + err.message, 'error');
-      console.error('sendNow error:', err);
-    } finally {
-      setLoading('sendNowBtn', false);
-    }
+      } else { showToast(data.message, 'error'); }
+    } catch (err) { showToast('Network error: ' + err.message, 'error'); }
+    finally { setLoading('sendNowBtn', false); }
   }
 
-  // ── Refresh history table ─────────────────────────────────
   async function refreshHistory() {
     try {
-      const res  = await fetch('/history');
+      const res = await fetch('/history');
       const data = await res.json();
       renderTable(data.emails);
       updateStats(data);
-      showToast('✅ History refreshed!', 'success');
-    } catch (err) {
-      showToast('❌ ' + err.message, 'error');
-      console.error('refreshHistory error:', err);
-    }
+      showToast('History refreshed', 'success');
+    } catch (err) { showToast(err.message, 'error'); }
   }
 
-  // ── Refresh stat numbers only ─────────────────────────────
   async function refreshStats() {
     try {
-      const res  = await fetch('/history');
+      const res = await fetch('/history');
       const data = await res.json();
       updateStats(data);
     } catch (_) {}
@@ -514,36 +748,30 @@
     document.getElementById('statFailed').textContent  = data.failed  || 0;
   }
 
-  // ── Render history table rows ─────────────────────────────
   function renderTable(emails) {
     const tbody = document.getElementById('historyBody');
     if (!emails || !emails.length) {
-      tbody.innerHTML = '<tr class="empty-row"><td colspan="6">No emails yet.</td></tr>';
+      tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">✉️</div><p>No emails yet.</p></div></td></tr>`;
       return;
     }
-    const badges = {
-      sent:      '<span class="badge badge-sent">✅ Sent</span>',
-      scheduled: '<span class="badge badge-scheduled">⏳ Scheduled</span>',
-      failed:    '<span class="badge badge-failed">❌ Failed</span>',
+    const badge = {
+      sent:      `<span class="badge badge-sent"><span class="badge-dot"></span>Sent</span>`,
+      scheduled: `<span class="badge badge-scheduled"><span class="badge-dot"></span>Scheduled</span>`,
+      failed:    `<span class="badge badge-failed"><span class="badge-dot"></span>Failed</span>`,
     };
     tbody.innerHTML = emails.map(e => `
       <tr>
-        <td>${badges[e.status] || e.status}</td>
+        <td>${badge[e.status] || e.status}</td>
         <td class="td-truncate">${esc(e.to)}</td>
         <td class="td-truncate">${esc(e.subject)}</td>
-        <td>${e.scheduled_at ? e.scheduled_at.slice(0, 16) : '—'}</td>
-        <td>${e.sent_at      ? e.sent_at.slice(0, 16)      : '—'}</td>
-        <td class="td-truncate" style="color:#94a3b8; font-size:0.8rem;">
-          ${esc((e.note || '—').slice(0, 60))}
-        </td>
+        <td style="color:var(--ink-soft);font-size:0.83rem;">${e.scheduled_at ? e.scheduled_at.slice(0,16) : '—'}</td>
+        <td style="color:var(--ink-soft);font-size:0.83rem;">${e.sent_at ? e.sent_at.slice(0,16) : '—'}</td>
+        <td class="td-truncate" style="color:var(--ink-faint);font-size:0.82rem;font-style:italic;">${esc((e.note||'—').slice(0,60))}</td>
       </tr>`).join('');
   }
 
-  // Safely escape HTML to prevent XSS
   function esc(s) {
-    return String(s)
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
   }
 </script>
 </body>
