@@ -15,7 +15,7 @@
   "crons": [
     {
       "path": "/cron/send-scheduled",
-      "schedule": "* * * * *"
+      "schedule": "0 8 * * *"
     }
   ]
 }
